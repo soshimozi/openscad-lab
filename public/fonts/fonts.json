@@ -1,0 +1,20 @@
+[
+  {
+    "id": "pacifico",
+    "displayName": "Pacifico",
+    "fontName": "Pacifico-Regular",
+    "assetPath": "/fonts/Pacifico-Regular.ttf"
+  },
+  {
+    "id": "liberation-sans",
+    "displayName": "Liberation Sans",
+    "fontName": "LiberationSans-Regular",
+    "assetPath": "/fonts/LiberationSans-Regular.ttf"
+  },
+  {
+    "id": "roboto",
+    "displayName": "Roboto-Regular",
+    "fontName": "Roboto-Regular",
+    "assetPath": "/fonts/Roboto-Regular.ttf"
+  }
+]
