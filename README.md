@@ -13,13 +13,13 @@ This project combines **React**, **TypeScript**, **OpenSCAD WebAssembly**, **3MF
 * Multi-plate support
 
 ```scad
-module mw_plate_1() {
+module osl_plate_1() {
 }
 
-module mw_plate_2() {
+module osl_plate_2() {
 }
 
-module mw_assembly_view() {
+module osl_assembly_view() {
 }
 ```
 
@@ -109,15 +109,15 @@ public/
 Special module names are recognized automatically.
 
 ```scad
-module mw_plate_1() {
+module osl_plate_1() {
 
 }
 
-module mw_plate_2() {
+module osl_plate_2() {
 
 }
 
-module mw_assembly_view() {
+module osl_assembly_view() {
 
 }
 ```
