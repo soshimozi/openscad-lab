@@ -1,5 +1,22 @@
 let fontsMounted = false;
 
+export type FontDefinition = {
+  id: string;
+  displayName: string;
+  fontName: string;
+  assetPath: string;
+};
+
+async function loadFontDefinitions(): Promise<FontDefinition[]> {
+  const response = await fetch("/fonts/fonts.json");
+
+  if (!response.ok) {
+    throw new Error("Failed to load font registry.");
+  }
+
+  return response.json();
+}
+
 async function ensureFontsMounted(instance: any) {
   if (fontsMounted) return;
 
@@ -17,28 +34,21 @@ async function ensureFontsMounted(instance: any) {
 </fontconfig>`
   );
 
-  const fonts = [
-    {
-      url: "/fonts/Pacifico-Regular.ttf",
-      path: "/usr/share/fonts/truetype/Pacifico-Regular.ttf",
-    },
-    {
-      url: "/fonts/LiberationSans-Regular.ttf",
-      path: "/usr/share/fonts/truetype/LiberationSans-Regular.ttf",
-    },
-  ];
+  const fonts = await loadFontDefinitions();
 
   for (const font of fonts) {
-    const response = await fetch(font.url);
+    const response = await fetch(font.assetPath);
 
     if (!response.ok) {
-      throw new Error(`Failed to load font: ${font.url}`);
+      throw new Error(`Failed to load font: ${font.assetPath}`);
     }
+
+    console.log(`loaded ${font.assetPath}`)
 
     const buffer = await response.arrayBuffer();
 
     instance.FS.writeFile(
-      font.path,
+      `/usr/share/fonts/truetype/${font.fontName}.ttf`,
       new Uint8Array(buffer)
     );
   }
