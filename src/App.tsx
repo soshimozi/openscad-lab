@@ -10,6 +10,7 @@ import { scanScadModules } from "./services/scadModuleScanner";
 import { buildRenderableScad } from "./services/buildRenderableScad";
 import ViewSelector from "./components/ViewSelector";
 import TopAppBar from "./components/TopAppBar";
+import LogPanel from "./components/LogPanel";
 
 type GenerateButtonProps = {
   onGenerate: () => void;
@@ -44,14 +45,18 @@ function App() {
   const defaultScad = "module osl_assembly_view() { cube(20); }";
 
   const [scad, setScad] = useState(defaultScad);
-  const [isDirty, setIsDirty] = useState(false);
-
   function handleScadChange(value: string) {
     setScad(value);
-    setIsDirty(true);
   }
 
   const renderer = useOpenScadRenderer();
+
+  const [showLogs, setShowLogs] = useState(false);
+
+  // Auto-open the log panel whenever a render error surfaces
+  useEffect(() => {
+    if (renderer.error) setShowLogs(true);
+  }, [renderer.error]);
 
   const [renderTarget, setRenderTarget] = useState<RenderTarget>({
     kind: "assembly",
@@ -138,13 +143,12 @@ function App() {
     }
 
     setRenderCache(nextCache);
-    setIsDirty(false);
   }, [scad, scan.hasAssemblyView, plateKey, scan.plates, renderer]);
 
   const [panels, setPanels] = useState<ToolbarPanel[]>([
     { display: "Code", active: true, key: "code" },
     { display: "View", active: true, key: "view" },
-    { display: "Customize", active: false, key: "customize" },
+    { display: "Customize", active: true, key: "customize" },
   ]);
 
   const activePanels = useMemo(
@@ -170,21 +174,33 @@ function App() {
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        {activePanels.code &&
-          (fillSinglePanel ? (
-            <EditorPane value={scad} onChange={handleScadChange} fill />
-          ) : (
-            <ResizablePane initialWidth={500}>
-              <EditorPane value={scad} onChange={handleScadChange} />
-            </ResizablePane>
-          ))}
 
         {activePanels.customize &&
           (fillSinglePanel ? (
             <div className="flex min-w-0 flex-1 flex-col">
               <CustomizePane fill />
 
-              <div className="flex h-16 shrink-0 items-center justify-end border-t border-neutral-800 bg-neutral-900 px-4">
+              {showLogs && (
+                <LogPanel logs={renderer.logs} />
+              )}
+
+              <div className="flex h-16 shrink-0 items-center justify-end gap-2 border-t border-neutral-800 bg-neutral-900 px-4">
+                <button
+                  type="button"
+                  title="Toggle output log"
+                  onClick={() => setShowLogs((v) => !v)}
+                  className={[
+                    "rounded-lg p-2 text-sm transition",
+                    showLogs
+                      ? "bg-white/10 text-blue-400"
+                      : renderer.error
+                        ? "text-red-400 hover:bg-white/10"
+                        : "text-neutral-400 hover:bg-white/10 hover:text-white",
+                  ].join(" ")}
+                >
+                  <i className="fa-solid fa-bars" />
+                </button>
+
                 <GenerateButton
                   onGenerate={handleGenerate}
                   isRendering={renderer.isRendering}
@@ -194,22 +210,52 @@ function App() {
           ) : (
             <ResizablePane initialWidth={400}>
               <div className="flex h-full flex-col">
-                <CustomizePane />
+                {/* Wrap so CustomizePane shrinks when log panel opens */}
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <CustomizePane fill />
+                </div>
 
-                <div className="flex flex-row h-16 shrink-0 items-center justify-end border-t border-neutral-800 bg-neutral-900 px-4">
+                {showLogs && (
+                  <LogPanel logs={renderer.logs} />
+                )}
+
+                <div className="flex h-16 shrink-0 flex-row items-center justify-end gap-2 border-t border-neutral-800 bg-neutral-900 px-4">
+                  <button
+                    type="button"
+                    title="Toggle output log"
+                    onClick={() => setShowLogs((v) => !v)}
+                    className={[
+                      "rounded-lg p-2 text-sm transition",
+                      showLogs
+                        ? "bg-white/10 text-blue-400"
+                        : renderer.error
+                          ? "text-red-400 hover:bg-white/10"
+                          : "text-neutral-400 hover:bg-white/10 hover:text-white",
+                    ].join(" ")}
+                  >
+                    <i className="fa-solid fa-bars" />
+                  </button>
+
                   <GenerateButton
                     onGenerate={handleGenerate}
                     isRendering={renderer.isRendering}
                   />
-                  {isDirty && (
-                    <span className="ml-3 text-xs text-amber-400">
-                      Changes not generated
-                    </span>
-                  )}                  
+
+
                 </div>
               </div>
             </ResizablePane>
           ))}
+
+        {activePanels.code &&
+          (fillSinglePanel ? (
+            <EditorPane value={scad} onChange={handleScadChange} fill />
+          ) : (
+            <ResizablePane initialWidth={500}>
+              <EditorPane value={scad} onChange={handleScadChange} />
+            </ResizablePane>
+          ))}
+
 
         {activePanels.view && (
           <ViewerPane model={activeModel}>

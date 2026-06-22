@@ -94,6 +94,18 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return buffer;
 }
 
+function ensureLocalizationMounted(instance: any) {
+  instance.FS.mkdirTree("/usr/share/openscad/locale");
+  instance.FS.mkdirTree("/locale");
+  instance.FS.mkdirTree("/translations");
+
+  Object.assign(instance.ENV ?? {}, {
+    LANG: "en_US.UTF-8",
+    LC_ALL: "en_US.UTF-8",
+    LANGUAGE: "en_US",
+  });
+}
+
 self.addEventListener("message", async (event: MessageEvent<RenderRequest>) => {
   const { id, scad } = event.data;
 
@@ -104,10 +116,12 @@ self.addEventListener("message", async (event: MessageEvent<RenderRequest>) => {
 
   try {
     const instance = await getOpenSCAD();
+    
 
     unlinkIfExists(instance, INPUT_PATH);
     unlinkIfExists(instance, OUTPUT_PATH);
 
+    ensureLocalizationMounted(instance);
 
     await ensureFontsMounted(instance);
 
