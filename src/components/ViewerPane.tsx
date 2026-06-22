@@ -5,9 +5,10 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 type ViewerPaneProps = {
   model?: ArrayBuffer;
+  children?: React.ReactNode;
 };
 
-export default function ViewerPane({ model }: ViewerPaneProps) {
+export default function ViewerPane({ model, children }: ViewerPaneProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -118,6 +119,7 @@ export default function ViewerPane({ model }: ViewerPaneProps) {
       )}
 
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
+      {children}
     </main>
   );
 }
