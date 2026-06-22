@@ -22,4 +22,8 @@ export interface WorkerResultMessage {
   error?: string;
 }
 
+export type RenderTarget =
+  | { kind: "assembly" }
+  | { kind: "plate"; plate: number };
+
 export type WorkerMessage = WorkerStreamMessage | WorkerResultMessage;
