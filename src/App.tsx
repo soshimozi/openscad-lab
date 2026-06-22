@@ -107,6 +107,32 @@ function App() {
     }
   }, [scan.hasAssemblyView, plateKey, renderTarget, scan.plates]);
 
+  function downloadArrayBuffer(
+    data: ArrayBuffer,
+    filename: string,
+    mimeType: string
+  ) {
+    const blob = new Blob([data], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+
+    URL.revokeObjectURL(url);
+  }  
+
+  function handleDownload3mf() {
+    if (!activeModel) return;
+
+    downloadArrayBuffer(
+      activeModel,
+      "model.3mf",
+      "model/3mf"
+    );
+  }  
+
   const handleGenerate = useCallback(async () => {
     console.log("[App] Generate clicked");
 
@@ -171,6 +197,7 @@ function App() {
         title="OpenSCAD Playground"
         actions={panels}
         onToggle={togglePanel}
+        onDownload={handleDownload3mf}
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
