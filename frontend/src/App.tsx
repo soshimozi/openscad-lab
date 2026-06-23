@@ -42,7 +42,28 @@ type RenderCache = {
 };
 
 function App() {
-  const defaultScad = "module osl_assembly_view() { cube(20); }";
+  const defaultScad = `module osl_plate_1() {
+    color("#FF0000") cube([10, 10, 10]);
+}
+
+module osl_plate_2() {
+    color("#00FF00") cube([10, 10, 10]);
+}
+
+// It is allowed that one of the plates generates empty models.
+// You can use this feature to make your code more adaptive. For example, if
+// your model contains several parts, you can separate them into different
+// plates only when they cannot fit into one plate.
+module osl_plate_3() {
+    // empty
+}
+
+// You can also define a specific module for users to preview the assembly view.
+module osl_assembly_view() {
+    osl_plate_1();
+    translate([0, 0, 10]) 
+    osl_plate_2();
+}`;
 
   const [scad, setScad] = useState(defaultScad);
   function handleScadChange(value: string) {
@@ -123,13 +144,88 @@ function App() {
     URL.revokeObjectURL(url);
   }  
 
-  function handleDownload3mf() {
+  // function handleDownload3mf() {
+  //   if (!activeModel) return;
+
+  //   downloadArrayBuffer(
+  //     activeModel,
+  //     "model.3mf",
+  //     "model/3mf"
+  //   );
+  // }  
+
+async function handleDownload3mf() {
     if (!activeModel) return;
 
+    const formData = new FormData();
+
+    const blob = new Blob([activeModel], { type: "model/3mf" });
+
+    formData.append("file", blob, "model.3mf");
+
+    formData.append(
+      "metadata",
+      JSON.stringify({
+        output: {
+          format: "3mf",
+          targetProfile: "bambu",
+        },
+        model: {
+          name: "model",
+        },
+        options: {
+          preserveOriginal: true,
+          includeMetadata: true,
+        },
+      })
+    );
+
+    const createResponse = await fetch("/api/v1/export", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!createResponse.ok) {
+      throw new Error(`Export failed: ${createResponse.status}`);
+    }
+
+    const job = await createResponse.json();
+
+    let status = job;
+
+    while (status.status !== "completed" && status.status !== "failed") {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const statusResponse = await fetch(
+        `/api/v1/export/${job.jobId}`
+      );
+
+      if (!statusResponse.ok) {
+        throw new Error(`Status check failed: ${statusResponse.status}`);
+      }
+
+      status = await statusResponse.json();
+    }
+
+    if (status.status === "failed") {
+      throw new Error(status.error?.message ?? "Export job failed.");
+    }
+
+    const downloadResponse = await fetch(
+      status.file.downloadUrl
+    );
+
+    if (!downloadResponse.ok) {
+      throw new Error(`Download failed: ${downloadResponse.status}`);
+    }
+
+    const processedBlob = await downloadResponse.blob();
+    const data = await processedBlob.arrayBuffer();
+
     downloadArrayBuffer(
-      activeModel,
-      "model.3mf",
-      "model/3mf"
+      data,
+      status.file.filename ?? "model.3mf",
+      status.file.mimeType ?? "model/3mf"
     );
   }  
 
