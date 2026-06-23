@@ -1,73 +1,72 @@
-# Browser OpenSCAD Playground
+# OpenSCAD MakerLab
 
 A browser-based parametric CAD playground inspired by MakerLab's Parametric Model Maker.
 
-This project combines **React**, **TypeScript**, **OpenSCAD WebAssembly**, **3MF export**, and **Three.js** to create a fully browser-native modeling environment with color-preserving rendering.
+Combines **React**, **TypeScript**, **OpenSCAD WebAssembly**, **3MF export**, **Three.js**, and an **Express backend** into a full-stack modeling environment with color-preserving rendering.
 
 ---
 
 ## Features
 
-* Monaco-based SCAD editor
-* Browser-side OpenSCAD rendering using WebAssembly
-* Multi-plate support
+* Monaco-based SCAD editor with syntax highlighting
+* Browser-side OpenSCAD rendering via WebAssembly (Web Worker, non-blocking)
+* Assembly and plate view selector — detected automatically from module names
+* 3MF export with preserved colors and materials
+* Three.js + ThreeMFLoader 3D preview with orbit controls
+* Resizable editor / viewer / customize panes
+* Output log panel with error/warning highlighting
+* Custom font support
+* Express backend with versioned REST API (`/api/v1/`)
+
+---
+
+## Module Naming Convention
+
+Special module names are detected automatically by the view selector.
 
 ```scad
-module osl_plate_1() {
+module mw_assembly_view() {
+  // full assembled model
 }
 
-module osl_plate_2() {
+module mw_plate_1() {
+  // first print plate
 }
 
-module osl_assembly_view() {
+module mw_plate_2() {
+  // second print plate
 }
 ```
 
-* Assembly and plate views
-* 3MF export with preserved colors and materials
-* Three.js + ThreeMFLoader preview
-* Custom font support
-* Resizable editor / viewer / customize panes
-* Load and save SCAD files
-* Render logs
+The editor scans for these and exposes **Assembly View**, **Plate 1**, **Plate 2**, etc. in the view selector overlay. Top-level SCAD statements are global and included in every render.
 
 ---
 
 ## Architecture
 
 ```text
-React
-
-App
-├── TopToolbar
-│    Code | View | Customize
-│
-├── EditorPane
-│    Monaco Editor
-│    Load / Save / Logs
-│
-├── CustomizePane
-│    Parameters
-│    Generate
-│
-└── ViewerPane
-      Three.js
-      ThreeMFLoader
-
-
-Web Worker
-
-SCAD Source
-      ↓
-OpenSCAD WASM
-      ↓
-3MF Export
-      ↓
-ArrayBuffer
-      ↓
-ThreeMFLoader
-      ↓
-Three.js Scene
+┌─────────────────────────────────────────┐
+│              Frontend (Vite + React)    │
+│                                         │
+│  TopAppBar  ─  Code | View | Customize  │
+│                                         │
+│  EditorPane          ViewerPane         │
+│  └─ Monaco Editor    └─ Three.js        │
+│                         ThreeMFLoader   │
+│  CustomizePane          ViewSelector    │
+│  └─ Generate button                    │
+│     └─ LogPanel                        │
+│                                         │
+│  Web Worker                             │
+│  └─ OpenSCAD WASM → 3MF → ArrayBuffer  │
+└────────────────────┬────────────────────┘
+                     │ /api/v1  (proxy in dev)
+┌────────────────────▼────────────────────┐
+│              Backend (Express)          │
+│                                         │
+│  /api/v1/health    →  health check      │
+│  /api/v1/export    →  export jobs       │
+└─────────────────────────────────────────┘
 ```
 
 ---
@@ -75,113 +74,81 @@ Three.js Scene
 ## Project Structure
 
 ```text
-src/
-
-components/
-├── TopToolbar
-├── EditorPane
-├── CustomizePane
-├── ViewerPane
-├── LogDrawer
-└── DownloadDialog
-
-hooks/
-└── useOpenScadRenderer
-
-services/
-├── sourceFiles
-└── modelExport
-
-workers/
-├── openscad.worker.ts
-└── fonts.ts
-
-public/
-├── openscad.js
-├── openscad.wasm
-└── fonts/
-```
-
----
-
-## Multi-Plate Support
-
-Special module names are recognized automatically.
-
-```scad
-module osl_plate_1() {
-
-}
-
-module osl_plate_2() {
-
-}
-
-module osl_assembly_view() {
-
-}
-```
-
-The editor scans for these modules and exposes:
-
-* Assembly View
-* Plate 1
-* Plate 2
-* etc.
-
-Top-level SCAD statements are considered global and appear in every plate and assembly view.
-
----
-
-## Fonts
-
-Fonts are mounted into the OpenSCAD virtual filesystem at runtime.
-
-Place fonts in:
-
-```text
-public/fonts/
-
-Pacifico-Regular.ttf
-LiberationSans-Regular.ttf
-Roboto-Regular.ttf
-```
-
-Example:
-
-```scad
-Text_Font = "Pacifico-Regular";
-
-linear_extrude(height=2)
-text(
-    "Hello World",
-    font = Text_Font,
-    size = 10,
-    halign = "center",
-    valign = "center"
-);
+openscad-makerlab/
+├── frontend/                   # Vite + React app
+│   ├── src/
+│   │   ├── components/         # UI components
+│   │   ├── hooks/              # useOpenScadRenderer
+│   │   ├── services/           # SCAD scanner, renderer client, build helpers
+│   │   ├── types/              # Shared TS types (RenderTarget, RenderResult…)
+│   │   └── workers/            # openscad.worker.ts, fonts.ts
+│   ├── public/
+│   │   ├── openscad.js         # Custom OpenSCAD WASM runtime
+│   │   ├── openscad.wasm
+│   │   └── fonts/
+│   └── vite.config.ts          # Dev proxy: /api → localhost:3001
+│
+├── backend/                    # Express API server
+│   └── src/
+│       ├── server.ts           # Entry point, mounts /api/v1
+│       ├── routes/             # Route definitions
+│       ├── controllers/        # Request handlers
+│       ├── services/           # Business logic, export jobs, 3MF handling
+│       └── types/              # Backend TS types
+│
+└── openscad-wasm/              # Git submodule — custom WASM build
 ```
 
 ---
 
 ## Running the Project
 
-Install:
+Install deps for each workspace:
 
 ```bash
-npm install
+cd frontend && npm install
+cd ../backend && npm install
 ```
 
-Start:
+Start both in separate terminals:
 
 ```bash
-npm run dev
+# Terminal 1 — frontend (http://localhost:5173)
+cd frontend && npm run dev
+
+# Terminal 2 — backend (http://localhost:3001)
+cd backend && npm run dev
 ```
 
-Build:
+The Vite dev server proxies all `/api` requests to the backend automatically — no CORS configuration needed during development.
+
+Build for production:
 
 ```bash
-npm run build
+cd frontend && npm run build
+cd ../backend && npm run build
+```
+
+---
+
+## API
+
+Base path: `/api/v1`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Returns `200 OK` |
+| `POST` | `/export` | Export job endpoint |
+
+---
+
+## Fonts
+
+Place font files in `frontend/public/fonts/`. They are mounted into the OpenSCAD virtual filesystem at render time.
+
+```scad
+linear_extrude(height = 2)
+  text("Hello", font = "Pacifico-Regular", size = 10);
 ```
 
 ---
@@ -222,7 +189,7 @@ git submodule update --init --recursive
 Enter the submodule:
 
 ```bash
-cd openscad_wasm
+cd openscad-wasm
 ```
 
 Build the Docker image:
@@ -254,7 +221,7 @@ This avoids the dependency and version issues often encountered when building di
 
 ## Enter the Build Container
 
-From the `openscad_wasm` directory:
+From the `openscad-wasm` directory:
 
 ```bash
 docker run -it --rm \
@@ -345,7 +312,7 @@ openscad.wasm
 Copy them into:
 
 ```text
-public/
+frontend/public/
 
 openscad.js
 openscad.wasm
