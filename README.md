@@ -25,15 +25,15 @@ Combines **React**, **TypeScript**, **OpenSCAD WebAssembly**, **3MF export**, **
 Special module names are detected automatically by the view selector.
 
 ```scad
-module mw_assembly_view() {
+module osl_assembly_view() {
   // full assembled model
 }
 
-module mw_plate_1() {
+module osl_plate_1() {
   // first print plate
 }
 
-module mw_plate_2() {
+module osl_plate_2() {
   // second print plate
 }
 ```
